@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greece & Rome — Interactive Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0d1b2a; --sea:#1b6ca8; --sea-bright:#2a9dd6; --foam:#eaf4f9;
+    --sand:#f3ede1; --paper:#fbf8f2; --terra:#c9603f; --olive:#7a8450;
+    --line:#d9cfbd; --shadow:0 8px 30px rgba(13,27,42,.10); --good:#3f8a5f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Outfit',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 22px}
+
+  .hero{background:radial-gradient(1200px 400px at 80% -10%, rgba(42,157,214,.35), transparent 60%),linear-gradient(160deg,var(--ink) 0%, #123a5e 55%, var(--sea) 100%);color:#fff;padding:56px 0 48px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.10) 1px, transparent 0);background-size:26px 26px;opacity:.5;pointer-events:none}
+  .hero .wrap{position:relative;z-index:1}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--sea-bright);margin-bottom:16px;font-weight:500}
+  .hero h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(38px,7.5vw,70px);line-height:.98;letter-spacing:-.02em;margin-bottom:8px}
+  .hero h1 em{font-style:italic;color:var(--sea-bright)}
+  .hero .sub{font-size:clamp(15px,2.3vw,19px);color:#cfe3f0;font-weight:300;max-width:600px;margin-top:12px}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);padding:7px 13px;border-radius:100px}
+  .chip b{color:var(--sea-bright);font-weight:500}
+
+  /* STATUS BAR */
+  .statusbar{position:sticky;top:0;z-index:50;background:rgba(13,27,42,.96);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.12);color:#fff}
+  .statusbar .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 22px}
+  .statusbar .st{font-family:'JetBrains Mono',monospace;font-size:12px;display:flex;align-items:center;gap:7px;color:#cfe3f0}
+  .statusbar .st b{color:#fff;font-weight:500}
+  .statusbar .ok{color:#7fe0a6}
+  .statusbar .bad{color:#ffb38a}
+  .statusbar .reset{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11.5px;background:transparent;border:1px solid rgba(255,255,255,.28);color:#cfe3f0;padding:6px 13px;border-radius:100px;cursor:pointer;transition:.15s}
+  .statusbar .reset:hover{background:rgba(255,255,255,.12);color:#fff}
+
+  .glance{background:var(--sand);border-bottom:1px solid var(--line)}
+  .glance .wrap{padding:28px 22px}
+  .glance h2{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--terra);margin-bottom:8px;font-weight:500}
+  .glance .hint{font-size:13px;color:#6b7280;margin-bottom:18px}
+  #timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--paper)}
+  .tstop{padding:15px 14px;border-right:1px solid var(--line)}
+  .tstop:last-child{border-right:none}
+  .tstop .d{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sea);letter-spacing:.03em}
+  .tstop .n{font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin:2px 0 6px;letter-spacing:-.01em}
+  .tstop.crete{background:linear-gradient(180deg,#fff,var(--foam))}
+  .tstop.crete .n{color:var(--sea)}
+
+  /* STEPPER */
+  .stepper{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#445}
+  .stepper .snv b{font-size:13px;color:var(--ink)}
+  .step{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--terra);font-size:15px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:.14s;font-weight:600}
+  .step:hover{background:var(--terra);color:#fff;border-color:var(--terra)}
+  .step:disabled{opacity:.35;cursor:not-allowed}
+  .step:focus-visible{outline:2px solid var(--sea-bright);outline-offset:2px}
+
+  section.place{padding:48px 0 8px;border-bottom:1px solid var(--line)}
+  .place-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+  .num{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--terra);font-weight:500;letter-spacing:.1em}
+  .place h2{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(28px,5vw,44px);letter-spacing:-.02em;line-height:1}
+  .role{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.16em;padding:4px 10px;border-radius:100px;font-weight:500}
+  .role.base{background:var(--foam);color:var(--sea)}
+  .role.day{background:#fbe9e2;color:var(--terra)}
+  .role.city{background:#eef0e4;color:var(--olive)}
+  .place-head .stepper{margin-left:auto}
+  .datrange{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--sea);margin:2px 0 0;letter-spacing:.03em}
+  .place .lede{font-size:16.5px;color:#3a4654;max-width:660px;margin:14px 0 22px;font-weight:300}
+  .place .lede b{font-weight:600;color:var(--ink)}
+
+  .cols{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;align-items:start}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  .map-card{border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:#fff}
+  .map-card iframe{display:block;width:100%;height:290px;border:0;filter:saturate(1.05)}
+  .map-card .cap{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6b7280;padding:9px 13px;background:var(--sand);border-top:1px solid var(--line);letter-spacing:.02em}
+
+  .todo h3{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--sea);margin-bottom:13px;font-weight:500}
+  .todo ul{list-style:none}
+  .todo li{padding:8px 0 8px 26px;position:relative;border-bottom:1px dashed var(--line);font-size:14.5px}
+  .todo li:last-child{border-bottom:none}
+  .todo li::before{content:"\2192";position:absolute;left:0;top:8px;color:var(--terra);font-weight:600}
+  .todo li b{font-weight:600}
+  .todo li span{display:block;font-size:12.5px;color:#6b7280;margin-top:1px}
+
+  .note{margin:22px 0 0;background:var(--foam);border-left:3px solid var(--sea-bright);padding:13px 16px;border-radius:0 10px 10px 0;font-size:14px;color:#234}
+  .note b{color:var(--sea)}
+  .note.warn{background:#fbe9e2;border-left-color:var(--terra)}
+  .note.warn b{color:var(--terra)}
+
+  /* FLEX SWAP */
+  .swap{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 4px}
+  .swap button{font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 16px;border-radius:100px;border:1px solid var(--line);background:#fff;color:#445;cursor:pointer;transition:.15s;font-weight:500}
+  .swap button:hover{border-color:var(--sea-bright);color:var(--sea)}
+  .swap button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .swap-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--terra);margin-bottom:2px;font-weight:500}
+  .daytrip-tag{display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--terra);background:#fbe9e2;padding:4px 11px;border-radius:100px;margin-bottom:14px;letter-spacing:.04em}
+
+  /* FERRY */
+  .ferry{background:var(--ink);color:#cfe3f0;padding:44px 0}
+  .ferry h2{font-family:'Fraunces',serif;color:#fff;font-size:30px;font-weight:600;margin-bottom:4px}
+  .ferry p.s{color:#8fb3c9;font-size:13px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;letter-spacing:.03em}
+  .book-row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 24px}
+  .book-row a{font-family:'JetBrains Mono',monospace;font-size:12.5px;text-decoration:none;color:var(--ink);background:var(--sea-bright);padding:9px 15px;border-radius:100px;font-weight:500;transition:.16s}
+  .book-row a:hover{background:#fff;transform:translateY(-2px)}
+  .book-row a.ghost{background:transparent;color:var(--sea-bright);border:1px solid rgba(42,157,214,.5)}
+  .book-row a.ghost:hover{background:rgba(42,157,214,.15);color:#fff}
+  #ferry-legs{display:grid;gap:10px}
+  .leg{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:13px 16px}
+  .leg .when{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--sea-bright);min-width:58px}
+  .leg .route{font-size:15px;color:#fff;font-weight:500}
+  .leg .route small{display:block;color:#8fb3c9;font-weight:400;font-size:12.5px;font-family:'Outfit'}
+  .leg .meta{font-family:'JetBrains Mono',monospace;font-size:12px;color:#cfe3f0;text-align:right;min-width:120px}
+  .leg .meta .pr{color:#7fe0a6}
+  .leg .blink{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sea-bright);text-decoration:none;border:1px solid rgba(42,157,214,.4);padding:5px 10px;border-radius:100px;white-space:nowrap;transition:.14s}
+  .leg .blink:hover{background:var(--sea-bright);color:var(--ink)}
+  .leg.air{background:rgba(42,157,214,.14);border-color:rgba(42,157,214,.4)}
+  .leg.air .route::before{content:"\2708  ";color:var(--sea-bright)}
+  .leg.boat .route::before{content:"\26F4  "}
+  .leg.indirect{border-color:rgba(201,96,63,.6);background:rgba(201,96,63,.12)}
+  @media(max-width:640px){.leg{grid-template-columns:auto 1fr;gap:8px}.leg .meta,.leg .blink{grid-column:2;text-align:left;min-width:0}}
+  .ferry .tip{margin-top:18px;font-size:13px;color:#8fb3c9;font-family:'Outfit'}
+  .ferry .tip b{color:#fff}
+
+  .lodging{background:var(--sand);padding:54px 0;border-top:1px solid var(--line)}
+  .lodging .intro{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--terra);margin-bottom:8px;font-weight:500}
+  .lodging h2{font-family:'Fraunces',serif;font-size:clamp(30px,5vw,44px);font-weight:900;letter-spacing:-.02em;margin-bottom:8px}
+  .lodging .note{margin-bottom:28px}
+  #lodge-grid{display:grid;gap:18px}
+  .lodge{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
+  .lodge .lh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .lodge h3{font-family:'Fraunces',serif;font-size:23px;font-weight:600}
+  .lodge .stay{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6b7280;letter-spacing:.03em}
+  .pax{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.06em;padding:3px 9px;border-radius:100px;font-weight:500}
+  .pax.six{background:#eef0e4;color:var(--olive)}
+  .pax.four{background:var(--foam);color:var(--sea)}
+  .lodge .tier{font-size:13px;color:#6b7280;margin:8px 0 14px}
+  .links{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:620px){.links{grid-template-columns:1fr}}
+  .links a{display:block;text-decoration:none;border:1px solid var(--line);border-radius:11px;padding:11px 13px;transition:.18s;background:#fff}
+  .links a:hover{border-color:var(--sea-bright);transform:translateY(-2px);box-shadow:0 6px 16px rgba(27,108,168,.13)}
+  .links a .k{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--terra)}
+  .links a .v{font-size:14px;color:var(--ink);font-weight:500;margin-top:3px}
+  .links a .v small{color:#6b7280;font-weight:400}
+  .links a.mar .k{color:var(--sea)}
+
+  footer{background:var(--ink);color:#8fb3c9;padding:32px 0;font-size:13px;font-family:'JetBrains Mono',monospace;letter-spacing:.03em}
+  footer b{color:#fff}
+  footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Interactive planner · 6 in Greece, 4 home via Rome</div>
+    <h1>Athens, the <em>Cyclades</em><br>& a Cretan finish</h1>
+    <p class="sub">Swap the middle island, drag the nights at any stop, and the dates, ferries and lodging all recompute. Crete stays the fly-out for your booked Aug 4 flight.</p>
+    <div class="hero-meta">
+      <span class="chip">In <b>ATH</b> · Jul 25, 12:45 am</span>
+      <span class="chip">Out <b id="hero-out">HER&rarr;FCO · Aug 4</b>, 16:40</span>
+      <span class="chip">Home <b>FCO&rarr;TPA</b> · Aug 5</span>
+    </div>
+  </div>
+</header>
+
+<div class="statusbar"><div class="wrap" id="status"></div></div>
+
+<div class="glance"><div class="wrap">
+  <h2>Build your route</h2>
+  <p class="hint">Use the − / + on any stop to change nights. Everything below updates live.</p>
+  <div id="timeline"></div>
+</div></div>
+
+<!-- ATHENS -->
+<section class="place"><div class="wrap">
+  <div class="place-head"><span class="num">01</span><h2>Athens</h2><span class="role city">Gateway</span><span id="ctrl-athens"></span></div>
+  <p class="datrange" id="date-athens"></p>
+  <p class="lede">You land <b>12:45 am on the 25th</b> — day one is a sleep-in and easy afternoon. The 26th is your full day: Acropolis early, the museum, then Plaka dinner as the rock lights up.</p>
+  <div class="cols">
+    <div class="map-card">
+      <iframe loading="lazy" title="Athens map" allowfullscreen src="https://www.google.com/maps?q=Acropolis+Athens+Greece&z=14&output=embed"></iframe>
+      <div class="cap">ATHENS · base in Plaka or Koukaki, walk to everything</div>
+    </div>
+    <div class="todo"><h3>See &amp; do</h3><ul>
+      <li><b>Acropolis &amp; Parthenon</b><span>Go at opening (8 am) to beat heat and crowds</span></li>
+      <li><b>Acropolis Museum</b><span>Glass floors over the ruins; Parthenon gallery up top</span></li>
+      <li><b>Plaka &amp; Anafiotika</b><span>Old quarter and the tiny Cycladic-style lanes</span></li>
+      <li><b>Monastiraki</b><span>Flea market and rooftop bars for sunset views</span></li>
+    </ul></div>
+  </div>
+</div></section>
+
+<!-- NAXOS -->
+<section class="place"><div class="wrap">
+  <div class="place-head"><span class="num">02</span><h2>Naxos</h2><span class="role base">Home base</span><span id="ctrl-naxos"></span></div>
+  <p class="datrange" id="date-naxos"></p>
+  <p class="lede">The anchor: <b>biggest, cheapest, most central</b> of the Cyclades — long beaches, a Venetian old town, mountain villages, and the best local food on the route. Your launchpad for a day trip.</p>
+  <div class="cols">
+    <div class="map-card">
+      <iframe loading="lazy" title="Naxos map" allowfullscreen src="https://www.google.com/maps?q=Naxos+Town+Chora+Greece&z=12&output=embed"></iframe>
+      <div class="cap">NAXOS · stay near Chora (town) or Agios Prokopios beach</div>
+    </div>
+    <div class="todo"><h3>See &amp; do</h3><ul>
+      <li><b>Portara</b><span>Giant marble temple gate on the islet — sunset spot</span></li>
+      <li><b>Chora old town &amp; Kastro</b><span>Venetian castle quarter, lanes of tavernas</span></li>
+      <li><b>Plaka &amp; Agios Prokopios beaches</b><span>Long, shallow, golden</span></li>
+      <li><b>Mountain villages</b><span>Rent a car: Halki, kitron tastings, Apollonas kouros</span></li>
+    </ul></div>
+  </div>
+  <div id="daytrip" style="margin-top:32px"></div>
+</div></section>
+
+<!-- FLEX ISLAND -->
+<section class="place"><div class="wrap">
+  <div class="place-head"><span class="num">03</span><h2 id="flex-name">Santorini</h2><span class="role base" id="flex-role">Iconic</span><span id="ctrl-flex"></span></div>
+  <p class="datrange" id="date-flex"></p>
+  <div class="swap-label">Swap this stop</div>
+  <div class="swap" id="swap"></div>
+  <p class="lede" id="flex-blurb"></p>
+  <div class="cols">
+    <div class="map-card">
+      <iframe id="flex-map" loading="lazy" title="Island map" allowfullscreen src=""></iframe>
+      <div class="cap" id="flex-cap"></div>
+    </div>
+    <div class="todo"><h3>See &amp; do</h3><ul id="flex-todos"></ul></div>
+  </div>
+  <div class="note warn" id="flex-note"></div>
+</div></section>
+
+<!-- CRETE -->
+<section class="place"><div class="wrap">
+  <div class="place-head"><span class="num">04</span><h2>Crete</h2><span class="role base">Finale · Heraklion</span><span id="ctrl-crete"></span></div>
+  <p class="datrange" id="date-crete"></p>
+  <p class="lede">The big finish and your fly-out island. Base near <b>Heraklion</b> for the airport. Crete is the most varied island on the trip — palaces, hill villages, and some of Greece's best beaches — and far better value than Santorini.</p>
+  <div class="cols">
+    <div class="map-card">
+      <iframe loading="lazy" title="Crete map" allowfullscreen src="https://www.google.com/maps?q=Heraklion+Crete+Greece&z=11&output=embed"></iframe>
+      <div class="cap">CRETE · base near Heraklion (HER) for the Aug 4 / 16:40 flight</div>
+    </div>
+    <div class="todo"><h3>See &amp; do</h3><ul>
+      <li><b>Palace of Knossos</b><span>Europe's oldest city; the Minotaur's labyrinth</span></li>
+      <li><b>Archaeological Museum</b><span>The Minoan frescoes from Knossos</span></li>
+      <li><b>Elounda &amp; Spinalonga</b><span>Boat to the fortress-island; turquoise swims</span></li>
+      <li><b>Heraklion old town</b><span>Venetian Koules fortress, harbor dinners</span></li>
+    </ul></div>
+  </div>
+  <div class="note"><b>Why Crete is the safe fly-out:</b> three carriers fly Heraklion&rarr;Rome direct (ITA, Neos, Wizz). Your booked flight is the <b>16:40 direct on Aug 4</b>, landing Rome ~19:00, with an earlier same-day direct as backup. Keep Crete checkout on Aug 4 (status bar tells you if your nights still fit).</div>
+</div></section>
+
+<!-- FERRY -->
+<div class="ferry"><div class="wrap">
+  <h2>Getting between stops</h2>
+  <p class="s">PRICES &amp; TIMES ARE TYPICAL-SUMMER ESTIMATES (PER PERSON) — TAP "BOOK" FOR LIVE 2026 TIMES</p>
+  <div class="book-row">
+    <a href="https://www.ferryhopper.com" target="_blank" rel="noopener">Ferryhopper &rarr;</a>
+    <a class="ghost" href="https://www.directferries.com" target="_blank" rel="noopener">Direct Ferries</a>
+    <a class="ghost" href="https://www.seajets.gr" target="_blank" rel="noopener">Seajets</a>
+    <a class="ghost" href="https://www.bluestarferries.com" target="_blank" rel="noopener">Blue Star</a>
+  </div>
+  <div id="ferry-legs"></div>
+  <p class="tip" id="ferry-tip"></p>
+</div></div>
+
+<!-- ALT -->
+<section class="place"><div class="wrap" style="padding-bottom:28px">
+  <div class="place-head"><span class="num">ALT</span><h2 style="font-size:clamp(24px,4vw,34px)">The adventure variant</h2></div>
+  <p class="lede">Want to go deeper on Crete? Keep the middle island a <b>day trip from Naxos</b> instead of a stay (set its nights toward 0 and add them to Crete), then split Crete: <b>Chania</b> (Venetian harbor, Samaria Gorge, Balos/Elafonissi) then drive east to <b>Heraklion</b> for the 16:40 flight out.</p>
+</div></section>
+
+<!-- LODGING -->
+<div class="lodging"><div class="wrap">
+  <div class="intro">Where to stay · Greece for 6 · Rome for 4</div>
+  <h2>Lodging by stop</h2>
+  <div class="note"><b>Group note:</b> all <b>Greece stays are sized for 6</b> — at that size a villa or large Airbnb usually beats three hotel rooms. The <b>Rome hotel is for 4</b> (the group flying home together). Links open live searches for your dates.</div>
+  <div id="lodge-grid"></div>
+</div></div>
+
+<footer><div class="wrap">
+  <span>GREECE × ROME · 2026 · INTERACTIVE PLANNER</span>
+  <span id="foot-meta"></span>
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var TRIP_START=new Date(2026,6,25);          // Jul 25 2026
+  var TARGET_CRETE_OUT=new Date(2026,7,4);     // Aug 4  (HER->FCO booked)
+  var TARGET_HOME=new Date(2026,7,5);          // Aug 5  (FCO->TPA booked)
+
+  var DEFAULTS={athens:2,naxos:4,flex:2,crete:2,rome:1,island:'santorini'};
+
+  var stops=[
+    {key:'athens',name:'Athens',nights:2},
+    {key:'naxos', name:'Naxos', nights:4},
+    {key:'flex',  name:'Santorini',nights:2,isFlex:true},
+    {key:'crete', name:'Crete', nights:2},
+    {key:'rome',  name:'Rome',  nights:1,isCity:true}
+  ];
+  var flexIsland='santorini';
+
+  var ISLANDS={
+    santorini:{
+      name:'Santorini', role:'Iconic · caldera',
+      mapQ:'Oia+Santorini+Greece', z:12,
+      cap:'stay in Oia, Imerovigli, or Fira for caldera views',
+      blurb:'The famous one — and with the later flight you actually <b>sleep here</b>: sunset one evening, a slow cliff-walk the next, no race for the last boat.',
+      todos:[
+        ['Oia sunset','The famous one; claim a spot early or watch from a quieter terrace'],
+        ['Fira–Imerovigli caldera walk','Cliff-edge path with nonstop volcano views'],
+        ['Caldera catamaran cruise','Volcano, hot springs, Red Beach — half-day'],
+        ['Assyrtiko wine tasting','Volcanic-ash vineyards; Santo Wines for the view'],
+        ['Akrotiri','The "Minoan Pompeii" — preserved Bronze Age town']
+      ],
+      fromNaxos:{time:'~1–2 hrs',price:'€31–60',freq:'up to 8 daily'},
+      toCrete:{dest:'Heraklion',time:'~1.5–2 hrs',price:'€40–70',direct:true,
+               note:'Direct &amp; frequent. Departs late afternoon, arrives evening — a Crete night is required (no same-day onward).'},
+      lodgeTier:'Caldera-view villas in Oia/Imerovigli are the splurge; Fira &amp; Firostefani are cheaper with the same views. For 6, a multi-bedroom cave villa. Bonvoy: <b>Mystique (Lux. Collection)</b>, Oia.',
+      marName:'Mystique, Oia', marSub:'Lux. Collection', marQ:'Mystique+Santorini+Luxury+Collection+Marriott'
+    },
+    paros:{
+      name:'Paros', role:'Calm · chic',
+      mapQ:'Naoussa+Paros+Greece', z:12,
+      cap:'stay in Naoussa (old port) or Parikia',
+      blurb:'Cheaper and calmer than Santorini, with a gorgeous fishing-port-turned-chic harbor at Naoussa and excellent food. The easy-living pick.',
+      todos:[
+        ['Naoussa old port','Tiny harbor ringed with tavernas and bars — the heart of Paros'],
+        ['Panagia Ekatontapyliani','Byzantine "church of 100 doors" in Parikia'],
+        ['Kolymbithres beach','Wind-sculpted granite coves and clear water'],
+        ['Lefkes village','Marble-laned mountain town with views to Naxos'],
+        ['Antiparos day hop','5-min boat: sea cave, low-key beaches, Tom Hanks sightings']
+      ],
+      fromNaxos:{time:'~30–45 min',price:'€15–30',freq:'very frequent'},
+      toCrete:{dest:'Heraklion',time:'~3.5–4 hrs',price:'€55–90',direct:true,
+               note:'Seasonal direct Seajets line (Mykonos–Paros–Naxos–Santorini–Crete) — fewer departures, book early. Or connect via Santorini.'},
+      lodgeTier:'Naoussa for the scene, Parikia for value, Golden Beach for sand. For 6, look at villas above Naoussa bay.',
+      marName:'No Bonvoy on Paros', marSub:'go villa/Airbnb', marQ:'best+hotels+Paros+Greece'
+    },
+    milos:{
+      name:'Milos', role:'Wild · volcanic',
+      mapQ:'Sarakiniko+Milos+Greece', z:12,
+      cap:'stay in Plaka (views) or Adamantas (port)',
+      blurb:'Surreal volcanic landscapes and the fewest crowds — the adventurous swap. Heads-up: Milos ferry links are the trickiest of the four (see the note).',
+      todos:[
+        ['Sarakiniko','Blinding-white lunar moonscape over the sea'],
+        ['Kleftiko sea caves','Reachable only by boat — book a day cruise'],
+        ['Plaka village','Whitewashed hilltop, castle, the island\'s best sunset'],
+        ['Firopotamos &amp; Mandrakia','Postcard fishing coves with colored boat garages'],
+        ['Catacombs &amp; ancient theatre','Early-Christian catacombs near Trypiti']
+      ],
+      fromNaxos:{time:'~2.5–4 hrs',price:'€35–60',freq:'limited — may connect'},
+      toCrete:{dest:'Heraklion',time:'via Santorini',price:'€60–100',direct:false,
+               note:'No direct Milos→Crete. Connect via Santorini (Milos→Santorini ~1.5–2 hrs, then Santorini→Heraklion). Build in a buffer; consider an overnight on Santorini if times are tight.'},
+      lodgeTier:'Plaka/Trypiti for views and sunset; Adamantas and Pollonia for the water. For 6, villas near Adamantas keep the ferry close.',
+      marName:'No Bonvoy on Milos', marSub:'go villa/Airbnb', marQ:'best+hotels+Milos+Greece'
+    },
+    mykonos:{
+      name:'Mykonos', role:'Lively · party',
+      mapQ:'Mykonos+Town+Greece', z:13,
+      cap:'stay in Chora (town) or Ornos (beach)',
+      blurb:'Make the famous party island your base instead of a day trip — biggest scene, priciest beds. Best if nightlife and beach clubs are the point.',
+      todos:[
+        ['Little Venice &amp; the windmills','The postcard waterfront; best at golden hour'],
+        ['Delos','Boat ~30 min to the ancient sacred island — go morning'],
+        ['Chora\'s whitewashed maze','Boutiques, bougainvillea, the famous lanes'],
+        ['Beach clubs','Paradise / Super Paradise for the scene; Ornos for calmer'],
+        ['Ano Mera','Quieter inland village &amp; the Panagia Tourliani monastery']
+      ],
+      fromNaxos:{time:'~35 min',price:'€20–40',freq:'frequent'},
+      toCrete:{dest:'Heraklion',time:'~4–4.5 hrs',price:'€60–95',direct:true,
+               note:'Seasonal direct Seajets line (long ride); or connect via Santorini. Departs Cyclades for Crete late in the day.'},
+      lodgeTier:'Chora for nightlife, Ornos/Platis Gialos for beach. For 6, a villa with a pool above Ornos. Bonvoy: <b>Santa Marina (Lux. Collection)</b>.',
+      marName:'Santa Marina', marSub:'Lux. Collection', marQ:'Santa+Marina+Mykonos+Luxury+Collection+Marriott'
+    }
+  };
+
+  // ---- date helpers ----
+  function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x;}
+  function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
+  function fmt(d){return MON[d.getMonth()]+' '+d.getDate();}
+  function rangeStr(a,b){ // arrive a (inclusive), checkout b
+    if(a.getMonth()===b.getMonth()) return MON[a.getMonth()]+' '+a.getDate()+'–'+b.getDate();
+    return fmt(a)+' – '+fmt(b);
+  }
+  function computed(){
+    var d=new Date(TRIP_START),out=[];
+    for(var i=0;i<stops.length;i++){
+      var s=stops[i];
+      var arrive=new Date(d), checkout=addDays(d,s.nights);
+      out.push({key:s.key,name:s.key==='flex'?ISLANDS[flexIsland].name:s.name,nights:s.nights,arrive:arrive,checkout:checkout,isFlex:s.isFlex,isCity:s.isCity});
+      d=checkout;
+    }
+    return out;
+  }
+  function get(arr,k){for(var i=0;i<arr.length;i++)if(arr[i].key===k)return arr[i];return null;}
+
+  // ---- stepper ----
+  function stepperHTML(key){
+    var s=null;for(var i=0;i<stops.length;i++)if(stops[i].key===key)s=stops[i];
+    var word=s.nights===1?'night':'nights';
+    return '<span class="stepper">'
+      +'<button class="step" data-stop="'+key+'" data-act="dec" aria-label="one fewer night"'+(s.nights<=0?' disabled':'')+'>\u2212</button>'
+      +'<span class="snv"><b>'+s.nights+'</b> '+word+'</span>'
+      +'<button class="step" data-stop="'+key+'" data-act="inc" aria-label="one more night">+</button>'
+      +'</span>';
+  }
+
+  // ---- renderers ----
+  function renderStatus(){
+    var c=computed(), cr=get(c,'crete'), ro=get(c,'rome');
+    var greeceNights=get(c,'athens').nights+get(c,'naxos').nights+get(c,'flex').nights+get(c,'crete').nights;
+    var fitsOut=sameDay(cr.checkout,TARGET_CRETE_OUT);
+    var fitsHome=sameDay(ro.checkout,TARGET_HOME);
+    var html='';
+    html+='<span class="st">Greece nights <b>'+greeceNights+'</b></span>';
+    html+='<span class="st">Fly out of Crete <b>'+fmt(cr.checkout)+'</b> '
+        +(fitsOut?'<span class="ok">\u2713 matches Aug 4 flight</span>':'<span class="bad">\u26A0 booked flight is Aug 4</span>')+'</span>';
+    html+='<span class="st">Home <b>'+fmt(ro.checkout)+'</b> '
+        +(fitsHome?'<span class="ok">\u2713</span>':'<span class="bad">\u26A0 booked Aug 5</span>')+'</span>';
+    html+='<button class="reset" id="resetBtn">Reset</button>';
+    document.getElementById('status').innerHTML=html;
+    document.getElementById('resetBtn').addEventListener('click',doReset);
+    document.getElementById('hero-out').innerHTML='HER&rarr;FCO · '+fmt(cr.checkout);
+    document.getElementById('foot-meta').innerHTML='out <b>HER '+fmt(cr.checkout)+'</b> · home <b>'+fmt(ro.checkout)+'</b>';
+  }
+
+  function renderTimeline(){
+    var c=computed(),html='';
+    for(var i=0;i<c.length;i++){
+      var s=c[i];
+      html+='<div class="tstop'+(s.key==='crete'?' crete':'')+'">'
+        +'<div class="d">'+rangeStr(s.arrive,s.checkout)+'</div>'
+        +'<div class="n">'+s.name+'</div>'
+        +stepperHTML(s.key)+'</div>';
+    }
+    document.getElementById('timeline').innerHTML=html;
+  }
+
+  function renderStopHeaders(){
+    var c=computed();
+    ['athens','naxos','crete','rome'].forEach(function(k){
+      var el=document.getElementById('ctrl-'+k); if(el) el.innerHTML=stepperHTML(k);
+      var dt=document.getElementById('date-'+k); var s=get(c,k);
+      if(dt) dt.textContent=rangeStr(s.arrive,s.checkout)+'  ·  '+s.nights+(s.nights===1?' night':' nights');
+    });
+    // rome label tweak
+    var ro=get(c,'rome');
+    var rdt=document.getElementById('date-rome');
+    if(rdt) rdt.textContent=rangeStr(ro.arrive,ro.checkout)+'  ·  land FCO ~19:00 on '+fmt(ro.arrive)+', home '+fmt(ro.checkout);
+  }
+
+  function renderDayTrip(){
+    var el=document.getElementById('daytrip');
+    var isMyk=flexIsland==='mykonos';
+    var name=isMyk?'Paros':'Mykonos';
+    var tag=isMyk?'~40 min':'~35 min';
+    var mapQ=isMyk?'Naoussa+Paros+Greece':'Mykonos+Town+Greece';
+    var blurb=isMyk
+      ? 'Mykonos is your main stop this trip, so day-trip <b>Paros</b> from Naxos instead — chic Naoussa harbor and quiet coves, a quick hop away.'
+      : 'Cosmopolitan, expensive to sleep on — perfect as a day visit. Early boat out, see the town and Delos, ride home at night.';
+    var todos=isMyk
+      ? [['Naoussa old port','Harbor tavernas and a tiny Venetian fort'],['Kolymbithres beach','Granite coves and clear water'],['Antiparos hop','5-min boat to the cave and calm beaches']]
+      : [['Delos','Ancient sacred island, boat ~30 min — go morning'],['Little Venice &amp; windmills','The postcard waterfront at golden hour'],['Beach-club afternoon','Paradise / Super Paradise for the scene']];
+    var li='';for(var i=0;i<todos.length;i++)li+='<li><b>'+todos[i][0]+'</b><span>'+todos[i][1]+'</span></li>';
+    el.innerHTML=''
+      +'<span class="daytrip-tag">\u25D0 DAY TRIP FROM NAXOS — fast ferry '+tag+'</span>'
+      +'<div class="place-head" style="margin-bottom:2px"><h2 style="font-size:clamp(22px,4vw,32px)">'+name+'</h2><span class="role day">Day trip · sleep on Naxos</span></div>'
+      +'<p class="lede" style="margin:10px 0 18px">'+blurb+'</p>'
+      +'<div class="cols"><div class="map-card">'
+      +'<iframe loading="lazy" title="'+name+' map" allowfullscreen src="https://www.google.com/maps?q='+mapQ+'&z=13&output=embed"></iframe>'
+      +'<div class="cap">'+name.toUpperCase()+' · '+tag+' by fast ferry from Naxos</div></div>'
+      +'<div class="todo"><h3>See &amp; do in a day</h3><ul>'+li+'</ul></div></div>';
+  }
+
+  function renderFlex(){
+    var isl=ISLANDS[flexIsland];
+    document.getElementById('flex-name').textContent=isl.name;
+    document.getElementById('flex-role').textContent=isl.role;
+    document.getElementById('flex-blurb').innerHTML=isl.blurb;
+    document.getElementById('flex-cap').innerHTML=isl.name.toUpperCase()+' · '+isl.cap;
+    document.getElementById('flex-map').src='https://www.google.com/maps?q='+isl.mapQ+'&z='+isl.z+'&output=embed';
+    var li='';for(var i=0;i<isl.todos.length;i++)li+='<li><b>'+isl.todos[i][0]+'</b><span>'+isl.todos[i][1]+'</span></li>';
+    document.getElementById('flex-todos').innerHTML=li;
+    document.getElementById('ctrl-flex').innerHTML=stepperHTML('flex');
+    var c=computed(),s=get(c,'flex');
+    document.getElementById('date-flex').textContent=rangeStr(s.arrive,s.checkout)+'  ·  '+s.nights+(s.nights===1?' night':' nights');
+    // note: connection caveat
+    var n=document.getElementById('flex-note');
+    if(isl.toCrete.direct){ n.className='note'; n.innerHTML='<b>Onward to Crete:</b> '+isl.toCrete.note; }
+    else { n.className='note warn'; n.innerHTML='<b>Heads-up on the Crete leg:</b> '+isl.toCrete.note; }
+    // swap buttons
+    var order=['santorini','paros','milos','mykonos'],sw='';
+    for(var j=0;j<order.length;j++){
+      sw+='<button data-isl="'+order[j]+'"'+(order[j]===flexIsland?' class="on"':'')+'>'+ISLANDS[order[j]].name+'</button>';
+    }
+    document.getElementById('swap').innerHTML=sw;
+  }
+
+  function renderFerries(){
+    var c=computed(),isl=ISLANDS[flexIsland];
+    var naxos=get(c,'naxos'),flex=get(c,'flex'),crete=get(c,'crete'),rome=get(c,'rome');
+    var FH='https://www.ferryhopper.com';
+    function leg(cls,when,route,sub,time,price,book){
+      var meta='<div class="meta">'+time+(price?' · <span class="pr">'+price+'</span>':'')+'</div>';
+      var bk=book?'<a class="blink" href="'+book+'" target="_blank" rel="noopener">book</a>':'<span></span>';
+      return '<div class="leg '+cls+'"><span class="when">'+when+'</span>'
+        +'<span class="route">'+route+(sub?'<small>'+sub+'</small>':'')+'</span>'+meta+bk+'</div>';
+    }
+    var dayName=flexIsland==='mykonos'?'Paros':'Mykonos';
+    var dayTime=flexIsland==='mykonos'?'~40 min · €15–30':'~35 min · €20–40';
+    var html='';
+    html+=leg('boat',fmt(naxos.arrive),'Piraeus / Rafina &rarr; Naxos','Blue Star (big, stable) or Seajets (fast)','~3–4 hrs','€38–60',FH);
+    html+=leg('boat','day trip','Naxos &rarr; '+dayName+' &rarr; Naxos','out early, back evening',dayTime.split(' · ')[0],dayTime.split(' · ')[1],FH);
+    html+=leg('boat',fmt(flex.arrive),'Naxos &rarr; '+isl.name,isl.fromNaxos.freq,isl.fromNaxos.time,isl.fromNaxos.price,FH);
+    html+=leg(isl.toCrete.direct?'boat':'boat indirect',fmt(crete.arrive),isl.name+' &rarr; '+isl.toCrete.dest+' (Crete)',isl.toCrete.direct?'direct':'connect via Santorini',isl.toCrete.time,isl.toCrete.price,FH);
+    html+=leg('air',fmt(crete.checkout),'Heraklion &rarr; Rome (FCO)','direct · 16:40 · ITA / Neos / Wizz','~2h 22m','',null);
+    html+=leg('air',fmt(rome.checkout),'Rome &rarr; Tampa','UA885 · 10:20 am · booked','home','',null);
+    document.getElementById('ferry-legs').innerHTML=html;
+    var tip='<b>Estimates, not live fares.</b> Cyclades fast-cat prices swing with operator and how early you book; the figures above are typical peak-summer per-person ranges. ';
+    if(!isl.toCrete.direct) tip+='<b>'+isl.name+'\u2192Crete needs a connection via Santorini</b> — give that day extra buffer. ';
+    tip+='Exact 2026 times publish closer to the date; lock seats once they appear, since August boats sell out.';
+    document.getElementById('ferry-tip').innerHTML=tip;
+  }
+
+  function renderLodging(){
+    var c=computed(),isl=ISLANDS[flexIsland];
+    var ath=get(c,'athens'),nax=get(c,'naxos'),flex=get(c,'flex'),cre=get(c,'crete'),rome=get(c,'rome');
+    function nights(s){return s.nights+(s.nights===1?' night':' nights');}
+    function abnb(q,ad){return 'https://www.airbnb.com/s/'+q+'/homes?adults='+ad;}
+    function gg(q){return 'https://www.google.com/search?q='+q;}
+    var islMar = (isl.marName.indexOf('No Bonvoy')===0)
+      ? '<a href="'+gg(isl.marQ)+'" target="_blank" rel="noopener"><span class="k">Hotel</span><span class="v">'+isl.name+' hotels <small>'+isl.marSub+'</small></span></a>'
+      : '<a class="mar" href="'+gg(isl.marQ)+'" target="_blank" rel="noopener"><span class="k">Marriott</span><span class="v">'+isl.marName+' <small>'+isl.marSub+'</small></span></a>';
+
+    var html='';
+    // Athens
+    html+=card('Athens',rangeStr(ath.arrive,ath.checkout)+' · '+nights(ath),'six',
+      'Plaka / Koukaki to walk to the Acropolis. For 6, a 3-bed apartment or small villa; Marriott if you\u2019d rather rooms.',
+      [['Airbnb','Plaka homes','3-bed for 6','air',abnb('Plaka--Athens--Greece',6)],
+       ['Villa','Athens villas','private, sleeps 6','',gg('Athens+Greece+villa+rental+for+6+guests')],
+       ['Marriott','Athens Marriott','+ King George','mar',gg('Athens+Marriott+Hotel+booking')]]);
+    // Naxos
+    html+=card('Naxos  \u2605 cheapest base',rangeStr(nax.arrive,nax.checkout)+' · '+nights(nax),'six',
+      'Best value on the trip. Near Chora or Agios Prokopios beach. No Marriott — go Airbnb/villa for 6.',
+      [['Airbnb','Naxos homes','town or beach, for 6','air',abnb('Naxos--Greece',6)],
+       ['Villa','Naxos villas','private pool, for 6','',gg('Naxos+Greece+villa+rental+private+pool+6+guests')],
+       ['Hotel','Naxos hotels','no Bonvoy here','',gg('best+hotels+Naxos+Greece')]]);
+    // Flex island (dynamic)
+    html+=card(isl.name,rangeStr(flex.arrive,flex.checkout)+' · '+nights(flex),'six',
+      isl.lodgeTier,
+      [['Airbnb',isl.name+' homes','for 6','air',abnb(isl.name+'--Greece',6)],
+       ['Villa',isl.name+' villas','private, sleeps 6','',gg(isl.name+'+Greece+villa+rental+6+guests')]],
+      islMar);
+    // Crete
+    html+=card('Crete — Heraklion',rangeStr(cre.arrive,cre.checkout)+' · '+nights(cre),'six',
+      'Base near Heraklion for the airport. Crete has Greece\u2019s best Marriott resorts (Elounda) — strong Bonvoy / employee-rate targets.',
+      [['Airbnb','Heraklion homes','near HER, for 6','air',abnb('Heraklion--Crete--Greece',6)],
+       ['Villa','Crete villas','Elounda, for 6','',gg('Crete+Elounda+villa+rental+private+6+guests')],
+       ['Marriott','Domes / Blue Palace','Lux. Collection','mar',gg('Marriott+Bonvoy+hotels+Crete+Elounda+Domes+Blue+Palace')]]);
+    // Rome (4)
+    html+=card('Rome — hotel night',rangeStr(rome.arrive,rome.checkout)+' · '+nights(rome),'four',
+      'Land FCO ~19:00; fly home 10:20 am next day. For 4, two central rooms or a suite by FCO for the early start. Rome is loaded with Bonvoy properties.',
+      [['Marriott','Rome Marriott','2 rooms / 4 guests','mar',gg('Marriott+Bonvoy+hotels+Rome+city+center+booking')],
+       ['Marriott · FCO','Near the airport','for the 10:20 am','mar',gg('Marriott+hotel+near+Rome+Fiumicino+airport')],
+       ['Airbnb','Rome apartments','centro storico, for 4','air',abnb('Rome--Italy',4)]]);
+
+    document.getElementById('lodge-grid').innerHTML=html;
+
+    function card(title,stay,paxClass,tier,links,extra){
+      var paxLabel=paxClass==='four'?'4 people':'6 people';
+      var l='';for(var i=0;i<links.length;i++){var x=links[i];
+        l+='<a class="'+(x[3]||'')+'" href="'+x[4]+'" target="_blank" rel="noopener"><span class="k">'+x[0]+'</span><span class="v">'+x[1]+' <small>'+x[2]+'</small></span></a>';}
+      if(extra) l+=extra;
+      return '<div class="lodge"><div class="lh"><h3>'+title+'</h3><span class="stay">'+stay+'</span><span class="pax '+paxClass+'">'+paxLabel+'</span></div>'
+        +'<p class="tier">'+tier+'</p><div class="links">'+l+'</div></div>';
+    }
+  }
+
+  function renderAll(){
+    renderStatus();renderTimeline();renderStopHeaders();renderDayTrip();renderFlex();renderFerries();renderLodging();
+  }
+
+  function doReset(){
+    stops[0].nights=DEFAULTS.athens;stops[1].nights=DEFAULTS.naxos;stops[2].nights=DEFAULTS.flex;
+    stops[3].nights=DEFAULTS.crete;stops[4].nights=DEFAULTS.rome;flexIsland=DEFAULTS.island;renderAll();
+  }
+
+  // events (delegation)
+  document.addEventListener('click',function(e){
+    var step=e.target.closest('.step');
+    if(step){
+      var k=step.getAttribute('data-stop'),act=step.getAttribute('data-act');
+      for(var i=0;i<stops.length;i++){if(stops[i].key===k){
+        if(act==='inc') stops[i].nights=Math.min(10,stops[i].nights+1);
+        else stops[i].nights=Math.max(0,stops[i].nights-1);
+      }}
+      renderAll();return;
+    }
+    var sw=e.target.closest('.swap button');
+    if(sw){flexIsland=sw.getAttribute('data-isl');renderAll();return;}
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
